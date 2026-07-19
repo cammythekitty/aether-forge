@@ -1,2 +1,23 @@
-.aetherforge/tools/
+# Python
+.venv/
+__pycache__/
 *.pyc
+*.pyo
+.env
+
+# Vite / Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Tauri
+src-tauri/target/
+
+# Æther Forge runtime
+.aetherforge/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+src-tauri/*
