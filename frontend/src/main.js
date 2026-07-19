@@ -70,10 +70,15 @@ async function bootAnimation() {
 function connectWS() {
   ws = new WebSocket("ws://localhost:7878");
 
+  let hasConnected = false;
+
   ws.onopen = () => {
-    statusDot.className = "status-dot";
-    statusDot.title = "Connected";
-    appendForge("⟁ Forge connected. Ready.", "");
+      statusDot.className = "status-dot";
+      statusDot.title = "Connected";
+      if (!hasConnected) {
+          hasConnected = true;
+          appendForge("⟁ Forge connected. Ready.", "");
+      }
   };
 
   ws.onmessage = (e) => {
@@ -89,6 +94,7 @@ function connectWS() {
       appendForge(data.text, "error");
     } else if (data.type === "done") {
       setThinking(false);
+      resetVoice();
     }
   };
 
@@ -197,16 +203,27 @@ input.addEventListener("keydown", (e) => {
 
 // ─── Voice button ────────────────────────────────────────────────────────────
 
+let voiceActive = false;
+
 voiceBtn.addEventListener("click", () => {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    voiceBtn.classList.add("active");
-    ws.send(JSON.stringify({ type: "voice_start" }));
-    setTimeout(() => {
-      voiceBtn.classList.remove("active");
-      ws.send(JSON.stringify({ type: "voice_stop" }));
-    }, 5000);
-  }
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    
+    if (!voiceActive) {
+        voiceActive = true;
+        voiceBtn.classList.add("active");
+        ws.send(JSON.stringify({ type: "voice_start" }));
+    } else {
+        voiceActive = false;
+        voiceBtn.classList.remove("active");
+        ws.send(JSON.stringify({ type: "voice_stop" }));
+    }
 });
+
+// Reset voice button when forge responds
+function resetVoice() {
+    voiceActive = false;
+    voiceBtn.classList.remove("active");
+}
 
 // ─── Boot ────────────────────────────────────────────────────────────────────
 

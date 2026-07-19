@@ -7,12 +7,14 @@ import os
 import subprocess
 import tempfile
 import threading
+import time
 from pathlib import Path
 from config import OS, PTT_KEY, RECORD_SECS, SAMPLE_RATE, WHISPER_MODEL_PATHS, WHISPER_PREFERRED
 from ui.terminal import forge_print, C
 
 WHISPER_BIN   = None
 WHISPER_MODEL = None
+_VOICE_CANCEL_EVENT = threading.Event()
 
 # ─── Detection ────────────────────────────────────────────────────────────────
 
@@ -43,16 +45,44 @@ def is_ready() -> bool:
 
 # ─── Recording ────────────────────────────────────────────────────────────────
 
-def record_audio() -> str | None:
+def reset_voice_cancel() -> None:
+    _VOICE_CANCEL_EVENT.clear()
+
+
+def cancel_voice_recording() -> None:
+    _VOICE_CANCEL_EVENT.set()
+
+
+def record_audio(stop_event: threading.Event | None = None, duration: float | None = None) -> str | None:
+    stop_event = stop_event if stop_event is not None else _VOICE_CANCEL_EVENT
+    duration = duration if duration is not None else RECORD_SECS
+
+    if stop_event.is_set():
+        return None
+
     try:
         import sounddevice as sd
         import numpy as np
         from scipy.io.wavfile import write as wav_write
 
         forge_print("⟁ Listening...", C.EMBER)
-        audio = sd.rec(int(RECORD_SECS * SAMPLE_RATE), samplerate=SAMPLE_RATE,
-                       channels=1, dtype="int16")
-        sd.wait()
+        audio_chunks = []
+
+        def callback(indata, frames, time_info, status):
+            audio_chunks.append(indata.copy())
+
+        stream = sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype="int16", callback=callback)
+        stream.start()
+        start = time.monotonic()
+        while not stop_event.is_set() and (time.monotonic() - start) < duration:
+            sd.sleep(50)
+        stream.stop()
+        stream.close()
+
+        if not audio_chunks:
+            return None
+
+        audio = np.concatenate(audio_chunks, axis=0).astype(np.int16)
         tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
         wav_write(tmp.name, SAMPLE_RATE, audio)
         return tmp.name
@@ -79,7 +109,9 @@ def transcribe(wav_path: str) -> str | None:
 
 # ─── Push to talk ─────────────────────────────────────────────────────────────
 
-def get_voice_input() -> str | None:
+def get_voice_input(stop_event: threading.Event | None = None) -> str | None:
+    stop_event = stop_event if stop_event is not None else _VOICE_CANCEL_EVENT
+
     try:
         from pynput import keyboard
 
@@ -107,13 +139,13 @@ def get_voice_input() -> str | None:
         listener = keyboard.Listener(on_press=on_press, on_release=on_release)
         listener.start()
         recording.wait(timeout=30)
-        wav_path[0] = record_audio()
+        wav_path[0] = record_audio(stop_event=stop_event)
         done.wait(timeout=10)
         listener.stop()
 
-        if wav_path[0]:
-            return transcribe(wav_path[0])
-        return None
+        if stop_event.is_set() or not wav_path[0]:
+            return None
+        return transcribe(wav_path[0])
     except Exception as e:
         forge_print(f"⟁ PTT error: {e}", C.EMBER)
         return None

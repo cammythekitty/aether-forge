@@ -8,6 +8,7 @@ import json
 import io
 import re
 import sys
+import threading
 import traceback
 import websockets
 from contextlib import redirect_stdout, redirect_stderr
@@ -30,13 +31,19 @@ class ForgeStream(io.TextIOBase):
         self.websocket = websocket
         self.msg_type  = msg_type
 
+    IGNORE_PATTERNS = [
+        "wayland.c:",
+        "terminal.c:",
+        "compositor does not",
+        "decoration manager",
+        "slave exited",
+        "xdg-toplevel",
+    ]
+
     def write(self, text):
         clean = strip_ansi(text)
-        if clean.strip():
-            asyncio.run_coroutine_threadsafe(
-                self._send(clean),
-                self.loop
-            )
+        if clean.strip() and not any(p in clean for p in IGNORE_PATTERNS):
+            asyncio.run_coroutine_threadsafe(self._send(clean), self.loop)
         return len(text)
 
     async def _send(self, text):
@@ -77,7 +84,7 @@ async def handle(websocket, brain_ask, executor_execute, env, list_tools, load_t
         except Exception:
             pass
 
-    await send("output", "⟁ Forge connected. Ready.")
+    voice_cancel_event = threading.Event()
 
     try:
         async for raw in websocket:
@@ -114,8 +121,13 @@ async def handle(websocket, brain_ask, executor_execute, env, list_tools, load_t
                     await send("error", "⟁ Voice unavailable.")
                     continue
 
+                voice_cancel_event.clear()
                 await send("output", "⟁ Listening...")
-                transcript = await asyncio.to_thread(voice_get)
+                transcript = await asyncio.to_thread(voice_get, voice_cancel_event)
+
+                if voice_cancel_event.is_set():
+                    await send("output", "⟁ Voice input cancelled.")
+                    continue
 
                 if transcript:
                     await send("output", f"⟁ Heard: {transcript}")
@@ -133,6 +145,10 @@ async def handle(websocket, brain_ask, executor_execute, env, list_tools, load_t
                     await send("done", "")
                 else:
                     await send("error", "⟁ Could not transcribe audio.")
+
+            elif msg_type == "voice_stop":
+                voice_cancel_event.set()
+                await send("output", "⟁ Voice input cancelled.")
 
     except websockets.exceptions.ConnectionClosed:
         pass
