@@ -42,7 +42,7 @@ class ForgeStream(io.TextIOBase):
 
     def write(self, text):
         clean = strip_ansi(text)
-        if clean.strip() and not any(p in clean for p in IGNORE_PATTERNS):
+        if clean.strip() and not any(p in clean for p in self.IGNORE_PATTERNS):
             asyncio.run_coroutine_threadsafe(self._send(clean), self.loop)
         return len(text)
 

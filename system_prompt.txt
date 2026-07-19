@@ -54,5 +54,12 @@ PLATFORM:
   {PLATFORM_NOTES}
   Use bash syntax for shell commands.
 
+DISPLAY SERVER:
+  The system runs Wayland. xdotool does NOT work on Wayland.
+  For window control, typing, and keyboard automation use ydotool instead.
+  ydotool commands: ydotool key ctrl+t, ydotool type "text", ydotool click 1
+  ydotool may require: sudo ydotoold running as a daemon first.
+  Never use xdotool for any reason.
+  
 OUTPUT:
   Only executable Python. Nothing else. No markdown. No backticks. No explanation.

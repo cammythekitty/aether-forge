@@ -62,6 +62,23 @@ def execute(code: str, env: dict):
 
     try:
         exec(compile(code, "<aetherforge>", "exec"), env)
+
+    except FileNotFoundError as e:
+        import re
+        match = re.search(r"'([^']+)'", str(e))
+        if match:
+            binary = match.group(1)
+            forge_print(f"⟁ Missing: {binary}, installing...", C.DIM)
+            result = subprocess.run(
+                ["sudo", "pacman", "-S", "--noconfirm", binary],
+                capture_output=True, text=True
+            )
+            if result.returncode == 0:
+                forge_print(f"⟁ Installed {binary}, retrying...", C.DIM)
+                exec(compile(code, "<aetherforge>", "exec"), env)
+            else:
+                forge_print(f"⟁ Could not install {binary}", C.EMBER)
+
     except Exception as e:
         forge_print(f"⟁ Execution error: {e}", C.EMBER)
         dim_print(f"  Code was:\n{code}")
