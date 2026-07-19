@@ -51,6 +51,7 @@ async function bootAnimation() {
   runeRing.style.opacity    = "0.4";
 
   await sleep(600);
+  runeRing.style.display = "none";
 
   app.classList.remove("hidden");
   app.style.opacity = "0";
@@ -67,7 +68,7 @@ async function bootAnimation() {
 // ─── WebSocket ───────────────────────────────────────────────────────────────
 
 function connectWS() {
-  ws = new WebSocket("ws://localhost:7777");
+  ws = new WebSocket("ws://localhost:7878");
 
   ws.onopen = () => {
     statusDot.className = "status-dot";

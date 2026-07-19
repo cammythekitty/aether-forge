@@ -1,68 +1,47 @@
 """
 Æther Forge — Brain
-Qwen system prompt construction and llama.cpp communication.
+Loads system prompt from file and handles Qwen communication.
 """
 
+from pathlib import Path
 from config import LLAMA_SERVER_URL, OS, DE, SHELL, TOOLS_DIR
-from ui.terminal import forge_print, C
 
 # ─── System prompt ────────────────────────────────────────────────────────────
+
+PROMPT_FILE = Path(__file__).parent.parent / "system_prompt.txt"
 
 def build_system_prompt(tools: list[str]) -> str:
     tools_str = "\n".join(f"  - {t}" for t in tools) if tools else "  (none yet)"
 
-    return f"""You are Æther Forge, a fully local AI assistant with complete control over the user's computer.
+    platform_notes = []
+    if DE == "wayland":
+        platform_notes.append("Use ydotool for simulating keypresses on Wayland.")
+    elif DE == "x11":
+        platform_notes.append("Use xdotool for keypresses on X11.")
+    if OS == "Windows":
+        platform_notes.append("Use PowerShell syntax for shell commands.")
 
-ENVIRONMENT:
-  OS: {OS}
-  Shell: {SHELL}
-  Display: {DE or 'tty'}
-  Wayland: {'yes' if DE == 'wayland' else 'no'}
-  Tools dir: {TOOLS_DIR}
-  Terminal emulator: foot
-  Vesktop (Discord) flatpak command: dev.vencord.Vesktop
+    try:
+        template = PROMPT_FILE.read_text()
+    except FileNotFoundError:
+        raise FileNotFoundError(f"system_prompt.txt not found at {PROMPT_FILE}")
 
-AVAILABLE TOOLS (pre-written Python modules you can call):
-{tools_str}
-
-YOUR JOB:
-  The user gives you a command. You execute it. No explanation. Just code.
-  Respond with raw Python only. No markdown. No backticks. No explanation.
-
-EXECUTION ENVIRONMENT (already available, use directly):
-  os, sys, subprocess, Path, time, json, requests
-  run(cmd: str) -> str        — runs a shell command, returns + prints output
-  run_tool(name: str)         — loads and runs a saved tool by name
-  git_commit(message: str)    — stages and commits everything in tools dir
-  TOOLS_DIR                   — Path to tools directory
-  FORGE_DIR                   — Path to ~/.aetherforge
-
-RUNNING TOOLS:
-  To run a saved tool ALWAYS use: run_tool("toolname")
-  Never use run() with a Path object. Never call tools as shell scripts.
-
-SELF UPGRADE:
-  If a task was complex or repetitive, save it as a reusable tool:
-  1. Write the tool source as a plain Python string
-  2. Save: open(TOOLS_DIR / 'toolname.py', 'w').write("source string here")
-  3. Call: git_commit("Added toolname: what it does")
-  Never write __code__.co_code — always write plain source code as a string.
-
-PLATFORM:
-  {'Use ydotool for simulating keypresses on Wayland.' if DE == 'wayland' else ''}
-  {'Use xdotool for keypresses on X11.' if DE == 'x11' else ''}
-  Always use start_new_session=True in subprocess.Popen when launching GUI apps.
-  Use bash syntax for shell commands.
-
-OUTPUT:
-  Only executable Python. Nothing else.
-"""
+    return template.format(
+        OS             = OS,
+        SHELL          = SHELL,
+        DE             = DE or "tty",
+        WAYLAND        = "yes" if DE == "wayland" else "no",
+        TOOLS_DIR      = TOOLS_DIR,
+        TOOLS          = tools_str,
+        PLATFORM_NOTES = "\n  ".join(platform_notes) if platform_notes else "Standard Linux environment.",
+    )
 
 # ─── Qwen call ────────────────────────────────────────────────────────────────
 
 def ask(user_input: str, tools: list[str]) -> str | None:
     try:
         import requests
+        from ui.terminal import forge_print, C
 
         payload = {
             "model": "qwen",
@@ -84,5 +63,6 @@ def ask(user_input: str, tools: list[str]) -> str | None:
         return resp.json()["choices"][0]["message"]["content"].strip()
 
     except Exception as e:
+        from ui.terminal import forge_print, C
         forge_print(f"⟁ Brain error: {e}", C.EMBER)
         return None
