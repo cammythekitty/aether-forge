@@ -42,7 +42,7 @@ def ask(user_input: str, tools: list[str]) -> str | None:
     try:
         import requests
         from ui.terminal import forge_print, C
-
+ 
         payload = {
             "model": "qwen",
             "messages": [
@@ -57,7 +57,7 @@ def ask(user_input: str, tools: list[str]) -> str | None:
         forge_print("⟁ Forging...", C.DIM)
         resp = requests.post(
             f"{LLAMA_SERVER_URL}/v1/chat/completions",
-            json=payload, timeout=120
+            json=payload, timeout=None
         )
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"].strip()

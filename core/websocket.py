@@ -61,11 +61,12 @@ class ForgeStream(io.TextIOBase):
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
 def clean_code(code: str) -> str:
-    """Strip markdown fences from Qwen output."""
     code = code.strip()
     if code.startswith("```"):
         lines = code.split("\n")
-        code  = "\n".join(lines[1:-1]) if lines[-1].strip() == "```" else "\n".join(lines[1:])
+        code = "\n".join(lines[1:-1]) if lines[-1].strip() == "```" else "\n".join(lines[1:])
+    # strip any remaining fence lines
+    code = "\n".join(l for l in code.split("\n") if not l.strip().startswith("```"))
     return code.strip()
 
 # ─── Handler ─────────────────────────────────────────────────────────────────
