@@ -8,6 +8,7 @@ from config import LLAMA_SERVER_URL, OS, DE, SHELL, TOOLS_DIR
 
 # ─── System prompt ────────────────────────────────────────────────────────────
 
+from string import Template
 PROMPT_FILE = Path(__file__).parent.parent / "system_prompt.txt"
 
 def build_system_prompt(tools: list[str]) -> str:
@@ -26,14 +27,14 @@ def build_system_prompt(tools: list[str]) -> str:
     except FileNotFoundError:
         raise FileNotFoundError(f"system_prompt.txt not found at {PROMPT_FILE}")
 
-    return template.format(
-        OS             = OS,
-        SHELL          = SHELL,
-        DE             = DE or "tty",
-        WAYLAND        = "yes" if DE == "wayland" else "no",
-        TOOLS_DIR      = TOOLS_DIR,
-        TOOLS          = tools_str,
-        PLATFORM_NOTES = "\n  ".join(platform_notes) if platform_notes else "Standard Linux environment.",
+    return Template(template).substitute(
+        OS=OS,
+        SHELL=SHELL,
+        DE=DE or "tty",
+        WAYLAND="yes" if DE == "wayland" else "no",
+        TOOLS_DIR=TOOLS_DIR,
+        TOOLS=tools_str,
+        PLATFORM_NOTES="\n  ".join(platform_notes) if platform_notes else "Standard Linux environment.",
     )
 
 # ─── Qwen call ────────────────────────────────────────────────────────────────

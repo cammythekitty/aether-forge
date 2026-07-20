@@ -35,14 +35,14 @@ SHELL = "powershell" if OS == "Windows" else "bash"
 
 # ─── Voice ────────────────────────────────────────────────────────────────────
 
-PTT_KEY      = "`"
+PTT_KEY      = "V"
 RECORD_SECS  = 6
 SAMPLE_RATE  = 16000
 
 WHISPER_MODEL_PATHS = [
-    Path.home() / ".local" / "share" / "whisper.cpp" / "models",
-    Path("/usr/share/whisper.cpp/models"),
-    Path("/usr/share/whisper-cpp/models"),
+    Path.home() / "home" / "Camilla" / ".aetherforge" / "models",
+    Path("/home/Camilla/.aetherforge/models"),
+    Path("/home/Camilla/.aetherforge/models"),
     FORGE_DIR / "models",
 ]
 

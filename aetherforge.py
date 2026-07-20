@@ -23,6 +23,7 @@ from core.tools import setup, list_tools, load_tools
 from core.voice import find_whisper, get_voice_input, is_ready as voice_ready
 from core.brain import ask
 from core.executor import make_env, execute
+from core.memory import save_session, extract_memory, recall
 
 # ─── Shared startup ───────────────────────────────────────────────────────────
 
@@ -79,6 +80,17 @@ def run_gui(env: dict):
 def run_terminal(env: dict, mode: str):
     forge_print("⟁ Æther Forge is awake.\n")
 
+    session_log = []
+
+    # Inject recalled memory into env so brain.py can use it
+    try:
+        past = recall("session start")
+        if past:
+            env["_memory"] = past
+            dim_print(f"  Memory: {len(past)} entries recalled")
+    except Exception:
+        env["_memory"] = []
+
     while True:
         try:
             user_input = None
@@ -100,19 +112,35 @@ def run_terminal(env: dict, mode: str):
 
             if user_input.lower() in ("exit", "quit", "q"):
                 forge_print("⟁ Forge cooling down. Farewell.", C.DIM)
+                _save_and_extract(session_log)
                 break
+
+            session_log.append(f"user: {user_input}")
 
             code = ask(user_input, list_tools())
             if code:
                 execute(code, env)
                 load_tools(env)
+                session_log.append(f"aether: {code}")
 
         except KeyboardInterrupt:
             print()
             forge_print("⟁ Forge cooling down. Farewell.", C.DIM)
+            _save_and_extract(session_log)
             break
         except Exception as e:
             forge_print(f"⟁ Loop error: {e}", C.EMBER)
+
+def _save_and_extract(session_log: list):
+    if not session_log:
+        return
+    try:
+        text = "\n".join(session_log)
+        save_session(text)
+        extract_memory(text)
+        dim_print("  Memory saved.")
+    except Exception as e:
+        dim_print(f"  Memory save failed: {e}")
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
