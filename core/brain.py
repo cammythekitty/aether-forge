@@ -9,7 +9,7 @@ from config import LLAMA_SERVER_URL, OS, DE, SHELL, TOOLS_DIR
 # ─── System prompt ────────────────────────────────────────────────────────────
 
 from string import Template
-PROMPT_FILE = Path(__file__).parent.parent / "system_prompt.txt"
+PROMPT_FILE = Path(__file__).parent.parent / "system_prompt.md"
 
 def build_system_prompt(tools: list[str]) -> str:
     tools_str = "\n".join(f"  - {t}" for t in tools) if tools else "  (none yet)"
@@ -25,7 +25,7 @@ def build_system_prompt(tools: list[str]) -> str:
     try:
         template = PROMPT_FILE.read_text()
     except FileNotFoundError:
-        raise FileNotFoundError(f"system_prompt.txt not found at {PROMPT_FILE}")
+        raise FileNotFoundError(f"system_prompt.md not found at {PROMPT_FILE}")
 
     return Template(template).substitute(
         OS=OS,
