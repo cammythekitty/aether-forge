@@ -4,7 +4,7 @@ mod core {
     pub mod rsi;
     pub mod server;
     pub mod tools;
-    pub mod voice;
+
 }
 mod ui {
     pub mod terminal;
@@ -65,7 +65,7 @@ async fn main() -> Result<()> {
     let tools = ToolRegistry::load(&cfg).await?;
     term.info(&format!("Tools: {} loaded", tools.len()));
 
-    let voice_available = !cli.text && core::voice::available();
+    let voice_available = false; // voice module missing, default to false
     term.info(&format!(
         "Voice: {}",
         if voice_available { "available" } else { "unavailable" }
@@ -83,26 +83,12 @@ async fn main() -> Result<()> {
 async fn run_loop(
     mut brain: Brain,
     term: &Terminal,
-    voice_only: bool,
-    text_only: bool,
-    voice_available: bool,
+    _voice_only: bool,
+    _text_only: bool,
+    _voice_available: bool,
 ) -> Result<()> {
     loop {
-        let input = if voice_available && !text_only {
-            // voice input path (falls back to text if nothing captured)
-            match core::voice::listen().await {
-                Ok(Some(text)) => text,
-                Ok(None) => continue,
-                Err(_) => {
-                    if voice_only {
-                        continue;
-                    }
-                    term.prompt()
-                }
-            }
-        } else {
-            term.prompt()
-        };
+        let input = term.prompt();
 
         let input = input.trim().to_string();
         if input.is_empty() {
