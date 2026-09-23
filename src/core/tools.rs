@@ -5,6 +5,21 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    #[test]
+    fn test_tool_struct() {
+        let tool = Tool {
+            name: "echo".to_string(),
+            path: PathBuf::from("/bin/echo"),
+        };
+        assert_eq!(tool.name, "echo");
+        assert_eq!(tool.path, PathBuf::from("/bin/echo"));
+    }
+}
+
 #[derive(Clone)]
 pub struct Tool {
     pub name: String,

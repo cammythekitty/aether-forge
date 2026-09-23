@@ -13,6 +13,20 @@ struct ChatRequest {
     temperature: f32,
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_message_struct() {
+        let msg = Message {
+            role: "user".to_string(),
+            content: "hello".to_string(),
+        };
+        assert_eq!(msg.role, "user");
+        assert_eq!(msg.content, "hello");
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Message {
     pub role: String,
